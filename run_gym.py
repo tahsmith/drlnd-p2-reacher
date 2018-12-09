@@ -93,4 +93,4 @@ configs = dict(
     noise_max=[0.2],
 )
 
-param_sweep(configs, 500)
+param_sweep(configs, 300)
