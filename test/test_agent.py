@@ -9,7 +9,7 @@ from agent import (
 
 @pytest.fixture
 def agent(device):
-    return Agent(device, 2, 3)
+    return Agent(device, 2, 3, batch_size=10)
 
 
 def test_policy(device, agent):

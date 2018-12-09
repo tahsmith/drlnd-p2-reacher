@@ -3,9 +3,9 @@ import numpy as np
 
 
 def normalise(x):
-    y = np.exp(x - np.max(x))
-    return y / y.sum()
-    # return x / x.sum()
+    # y = np.exp(x - np.max(x))
+    # return y / y.sum()
+    return x / x.sum()
 
 
 class ReplayBuffer:
@@ -35,7 +35,8 @@ class ReplayBuffer:
             self.last += 1
         else:
             # remove the least valuable memory
-            i = np.argmin(self.p)
+            # i = np.argmin(self.p)
+            i = np.random.randint(0, self.buffer_size)
 
         self.p[i] = p
         self.state[i, :] = state

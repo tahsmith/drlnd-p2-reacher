@@ -1,6 +1,7 @@
 import platform
 from contextlib import contextmanager
 
+import numpy as np
 from unityagents import UnityEnvironment
 
 from agent import Agent
@@ -20,19 +21,20 @@ def make_reacher_env():
 
 def reacher_episode(env, agent: Agent, brain_name, max_t=1000):
     env_info = env.reset(train_mode=True)[brain_name]
-    state = env_info.vector_observations[0]
+    state = np.array(env_info.vector_observations)
     score = 0
     for t in range(max_t):
         action = agent.policy(state)
         env_info = env.step(action)[brain_name]
-        next_state = env_info.vector_observations[0]
-        reward = env_info.rewards[0]
-        done = env_info.local_done[0]
+        next_state = np.array(env_info.vector_observations)
+        reward = np.array(env_info.rewards)
+        done = np.array(env_info.local_done, dtype=np.uint8)
         agent.step(state, action, reward, next_state, done)
         state = next_state
         score += reward
-        if done:
+
+        if done.any():
             break
 
-    agent.end_of_episode()
+    agent.end_of_episode(score)
     return score
