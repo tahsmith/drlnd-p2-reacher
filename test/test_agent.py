@@ -12,9 +12,10 @@ def agent(device):
     return Agent(device, 2, 3)
 
 
-# def test_epsilon_greedy_policy(device, agent):
-#     state = torch.randn((10, )).to(device)
-#     assert agent.epsilon_greedy_policy(1, state) in range(10)
+def test_policy(device, agent):
+    state = np.random.randn(5, 2)
+    action = agent.policy(state)
+    assert action.shape == (5, 3)
 
 
 def test_learn(agent: Agent):

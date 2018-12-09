@@ -1,3 +1,4 @@
+import copy
 import random
 
 import torch
@@ -12,7 +13,7 @@ from replay_buffer import ReplayBuffer
 class Agent:
     def __init__(self, device, state_size, action_size, buffer_size=10,
                  batch_size=10,
-                 learning_rate=0.1,
+                 learning_rate=1e-4,
                  discount_rate=0.99,
                  eps_decay=0.9,
                  tau=0.1,
@@ -24,13 +25,14 @@ class Agent:
 
         self.critic_control = Critic(state_size, action_size).to(device)
         self.critic_target = Critic(state_size, action_size).to(device)
-        self.optimizer = torch.optim.Adam(self.critic_control.parameters(),
-                                          lr=learning_rate)
+        self.critic_optimizer = torch.optim.Adam(
+            self.critic_control.parameters(),
+            lr=learning_rate)
 
         self.actor_control = Actor(state_size, action_size).to(device)
         self.actor_target = Actor(state_size, action_size).to(device)
-        self.optimizer = torch.optim.Adam(self.actor_control.parameters(),
-                                          lr=learning_rate)
+        self.actor_optimizer = torch.optim.Adam(self.actor_control.parameters(),
+                                                lr=learning_rate)
 
         self.batch_size = batch_size
         self.replay_buffer = ReplayBuffer(device, state_size, action_size,
@@ -46,9 +48,15 @@ class Agent:
         self.step_count = 0
         self.steps_per_update = steps_per_update
 
-    def policy(self, state):
-        state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
-        return self.actor_control(state).detach().numpy()
+        self.noise = OUNoise(action_size, 15071988)
+
+    def policy(self, state, add_noise=True):
+        state = torch.from_numpy(state).float().to(self.device)
+        action = self.actor_control(state).detach().cpu().numpy()
+        if add_noise:
+            action += self.noise.sample()
+        return np.clip(action, -1, 1)
+
     #
     # def epsilon_greedy_policy(self, eps, state):
     #     self.critic_control.eval()
@@ -79,11 +87,17 @@ class Agent:
             states, actions, rewards, next_states, dones)
         importance_scaling = (self.replay_buffer.buffer_size * p) ** -1
         loss = (importance_scaling * (error ** 2)).sum() / self.batch_size
-        self.optimizer.zero_grad()
+        self.critic_optimizer.zero_grad()
         loss.backward()
-        self.optimizer.step()
+        self.critic_optimizer.step()
 
-        self.update_target()
+        self.actor_optimizer.zero_grad()
+        loss = -self.critic_control(states, self.actor_control(states)).mean()
+        loss.backward()
+        self.actor_optimizer.step()
+
+        self.update_target(self.critic_control, self.critic_target)
+        self.update_target(self.actor_control, self.actor_target)
 
     def bellman_eqn_error(self, states, actions, rewards, next_states, dones):
         """Double DQN error - use the control network to get the best action
@@ -116,10 +130,10 @@ class Agent:
         return abs(self.bellman_eqn_error(state, action, reward, next_state,
                                           done)) + 1e-3
 
-    def update_target(self):
+    def update_target(self, control, target):
         for target_param, control_param in zip(
-                self.critic_target.parameters(),
-                self.critic_control.parameters()):
+                target.parameters(),
+                control.parameters()):
             target_param.data.copy_(
                 self.tau * control_param.data + (1.0 - self.tau) *
                 target_param.data)
@@ -133,3 +147,26 @@ class Agent:
 
     def restore(self, path):
         self.critic_control.load_state_dict(torch.load(path))
+
+
+class OUNoise:
+    """Ornstein-Uhlenbeck process."""
+
+    def __init__(self, size, seed, mu=0., theta=0.15, sigma=0.2):
+        """Initialize parameters and noise process."""
+        self.mu = mu * np.ones(size)
+        self.theta = theta
+        self.sigma = sigma
+        self.seed = random.seed(seed)
+        self.reset()
+
+    def reset(self):
+        """Reset the internal state (= noise) to mean (mu)."""
+        self.state = copy.copy(self.mu)
+
+    def sample(self):
+        """Update internal state and return it as a noise sample."""
+        x = self.state
+        dx = self.theta * (self.mu - x) + self.sigma * np.array([random.random() for i in range(len(x))])
+        self.state = x + dx
+        return self.state

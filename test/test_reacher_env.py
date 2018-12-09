@@ -16,9 +16,10 @@ def env():
 @pytest.fixture
 def agent():
     mock_agent = MagicMock()
-    mock_agent.policy.return_value = 1
+    mock_agent.policy.return_value = [[1]]
     return mock_agent
 
 
-def test_banana_episode(env, agent):
+def test_reacher_episode(env, agent):
     reacher_episode(env, agent, 'brain')
+

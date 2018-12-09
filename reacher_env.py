@@ -6,14 +6,14 @@ from unityagents import UnityEnvironment
 from agent import Agent
 
 if platform.system() == 'Darwin':
-    BANANA_APP = './Reacher.app'
+    REACHER_APP = './Reacher.app'
 else:
-    BANANA_APP = './Reacher_Linux_NoVis/Banana.x86_64'
+    REACHER_APP = './Reacher_Linux_NoVis/Reacher.x86_64'
 
 
 @contextmanager
 def make_reacher_env():
-    env = UnityEnvironment(file_name=BANANA_APP)
+    env = UnityEnvironment(file_name=REACHER_APP)
     yield env
     env.close()
 
@@ -23,7 +23,7 @@ def reacher_episode(env, agent: Agent, brain_name, max_t=1000):
     state = env_info.vector_observations[0]
     score = 0
     for t in range(max_t):
-        action = agent.policy(state)[0]
+        action = agent.policy(state)
         env_info = env.step(action)[brain_name]
         next_state = env_info.vector_observations[0]
         reward = env_info.rewards[0]

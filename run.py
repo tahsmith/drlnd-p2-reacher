@@ -24,7 +24,7 @@ def main():
             action_size,
             buffer_size=int(1e5),
             batch_size=64,
-            learning_rate=5e-4,
+            learning_rate=1e-4,
             discount_rate=0.99,
             eps_decay=0.995,
             tau=1e-3,
