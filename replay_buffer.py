@@ -35,8 +35,7 @@ class ReplayBuffer:
             self.last += 1
         else:
             # remove the least valuable memory
-            # i = np.argmin(self.p)
-            i = np.random.randint(0, self.buffer_size)
+            i = np.argmin(self.p)
 
         self.p[i] = p
         self.state[i, :] = state

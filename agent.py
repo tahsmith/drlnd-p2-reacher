@@ -17,7 +17,11 @@ class Agent:
                  discount_rate=0.99,
                  tau=0.1,
                  steps_per_update=4,
-                 action_range=None
+                 action_range=None,
+                 dropout_p=0.0,
+                 weight_decay=0.0001,
+                 noise_max=0.2,
+                 noise_decay=1.0
                  ):
         self.device = device
         self.state_size = state_size
@@ -25,22 +29,22 @@ class Agent:
 
         self.critic_control = Critic(state_size, action_size).to(device)
         self.critic_target = Critic(state_size, action_size).to(device)
-        self.critic_control.dropout.p = 0.0
+        self.critic_control.dropout.p = dropout_p
         self.critic_target.dropout.training = False
         self.critic_optimizer = torch.optim.Adam(
             self.critic_control.parameters(),
-            weight_decay=0.0001,
+            weight_decay=weight_decay,
             lr=learning_rate)
 
         self.actor_control = Actor(state_size, action_size, action_range).to(
             device)
         self.actor_target = Actor(state_size, action_size, action_range).to(
             device)
-        self.actor_control.dropout.p = 0.0
+        self.actor_control.dropout.p = dropout_p
         self.actor_target.dropout.training = False
         self.actor_optimizer = torch.optim.Adam(
             self.actor_control.parameters(),
-            weight_decay=0.0001,
+            weight_decay=weight_decay,
             lr=learning_rate)
 
         self.batch_size = batch_size
@@ -54,8 +58,9 @@ class Agent:
         self.step_count = 0
         self.steps_per_update = steps_per_update
 
-        self.noise = OUNoise(action_size, 15071988, sigma=0.2)
-        self.noise_decay = 0.99
+        self.noise_max = noise_max
+        self.noise = OUNoise(action_size, 15071988, sigma=self.noise_max)
+        self.noise_decay = noise_decay
         self.last_score = float('-inf')
 
     def policy(self, state, add_noise=True):
@@ -73,7 +78,7 @@ class Agent:
 
         for i in range(state.shape[0]):
             self.replay_buffer.add(state[i, :], action[i, :], reward[i],
-                                   next_state[i, :], done[i], 1.0)
+                                   next_state[i, :], done[i], p)
         if self.step_count % self.steps_per_update == 0:
             self.learn()
         self.step_count += 1
@@ -150,7 +155,7 @@ class Agent:
         else:
             sigma = self.noise.sigma / self.noise_decay
 
-        self.noise.sigma = min(sigma, 0.2)
+        self.noise.sigma = min(sigma, self.noise_max)
         self.last_score = final_score
         self.noise.reset()
 

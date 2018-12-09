@@ -7,7 +7,7 @@ import numpy as np
 class Actor(nn.Module):
     def __init__(self, state_size, action_size, action_range=None):
         super(Actor, self).__init__()
-        hidden_units = 64
+        hidden_units = 400
 
         if action_range is None:
             action_range = [[-1, 1] for _ in range(action_size)]
@@ -23,7 +23,6 @@ class Actor(nn.Module):
             self.dropout,
             nn.Linear(in_features=hidden_units, out_features=hidden_units),
             nn.ELU(),
-            self.dropout,
             nn.Linear(in_features=hidden_units, out_features=action_size),
         )
 
@@ -31,3 +30,8 @@ class Actor(nn.Module):
         x = self.pi(state)
         x = F.tanh(x) * self.action_range + self.action_0
         return x
+
+    def to(self, *args, **kwargs):
+        self.action_0 = self.action_0.to(*args, **kwargs)
+        self.action_range = self.action_range.to(*args, **kwargs)
+        return super(Actor, self).to(*args, **kwargs)
