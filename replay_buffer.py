@@ -15,7 +15,7 @@ class ReplayBuffer:
         self.action_size = action_size
 
         self.last = 0
-        self.p = np.empty((buffer_size,), dtype=np.float32)
+        self.p = np.zeros((buffer_size,), dtype=np.float32)
         self.state = np.empty((buffer_size, state_size), dtype=np.float32)
         self.action = np.empty((buffer_size, action_size), dtype=np.float32)
         self.reward = np.empty((buffer_size,), dtype=np.float32)
@@ -23,6 +23,7 @@ class ReplayBuffer:
         self.done = np.empty((buffer_size,), dtype=np.uint8)
 
         self.device = device
+        self.cursor = 0
 
     @property
     def buffer_size(self):
@@ -31,11 +32,11 @@ class ReplayBuffer:
     def add(self, state, action, reward, next_state, done, p=1.0):
         """Add a new experience to memory."""
         if self.last < self.buffer_size:
-            i = self.last
             self.last += 1
-        else:
-            # remove the least valuable memory
-            i = np.argmin(self.p)
+
+        i = self.cursor
+        self.cursor += 1
+        self.cursor %= self.buffer_size
 
         self.p[i] = p
         self.state[i, :] = state
@@ -47,9 +48,11 @@ class ReplayBuffer:
     def sample(self, batch_size):
         """Randomly sample a batch of experiences from memory."""
         p = normalise(self.p[:self.last])
+        # choices = np.random.choice(np.arange(self.last),
+        #                            size=(batch_size,),
+        #                            p=p)
         choices = np.random.choice(np.arange(self.last),
-                                   size=(batch_size,),
-                                   p=p)
+                                   size=(batch_size,))
 
         states = torch.from_numpy(self.state[choices, :]).float().to(
             self.device)
@@ -61,7 +64,7 @@ class ReplayBuffer:
             self.device)
         dones = torch.from_numpy(self.done[choices, np.newaxis]).float().to(
             self.device)
-        p = torch.from_numpy(self.p[choices, np.newaxis]).float().to(
+        p = torch.from_numpy(p[choices, np.newaxis]).float().to(
             self.device)
 
         return states, actions, rewards, next_states, dones, p

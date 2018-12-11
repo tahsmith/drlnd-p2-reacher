@@ -13,7 +13,8 @@ from replay_buffer import ReplayBuffer
 class Agent:
     def __init__(self, device, state_size, action_size, buffer_size=10,
                  batch_size=10,
-                 learning_rate=1e-4,
+                 actor_learning_rate=1e-4,
+                 critic_learning_rate=1e-3,
                  discount_rate=0.99,
                  tau=0.1,
                  steps_per_update=4,
@@ -29,25 +30,22 @@ class Agent:
 
         self.critic_control = Critic(state_size, action_size).to(device)
         self.critic_target = Critic(state_size, action_size).to(device)
-        self.critic_control.dropout.p = dropout_p
-        self.critic_target.dropout.training = False
         self.critic_optimizer = torch.optim.Adam(
             self.critic_control.parameters(),
             weight_decay=weight_decay,
-            lr=learning_rate)
+            lr=critic_learning_rate)
 
         self.actor_control = Actor(state_size, action_size, action_range).to(
             device)
         self.actor_target = Actor(state_size, action_size, action_range).to(
             device)
-        self.actor_control.dropout.p = dropout_p
-        self.actor_target.dropout.training = False
         self.actor_optimizer = torch.optim.Adam(
             self.actor_control.parameters(),
             weight_decay=weight_decay,
-            lr=learning_rate)
+            lr=actor_learning_rate)
 
         self.batch_size = batch_size
+        self.min_buffer_size = batch_size
         self.replay_buffer = ReplayBuffer(device, state_size, action_size,
                                           buffer_size)
 
@@ -70,11 +68,14 @@ class Agent:
             action = self.actor_control(state).cpu().numpy()
         self.actor_control.train()
         if add_noise:
-            action += self.noise.sample()
+            noise = self.noise.sample()
+            action += noise
+            # action += np.random.uniform(-self.noise_max, self.noise_max, (1, 4))
         return action
 
     def step(self, state, action, reward, next_state, done):
-        p = self.calculate_p(state, action, reward, next_state, done)
+        # p = self.calculate_p(state, action, reward, next_state, done)
+        p = np.ones_like(done)
 
         for i in range(state.shape[0]):
             self.replay_buffer.add(state[i, :], action[i, :], reward[i],
@@ -84,23 +85,26 @@ class Agent:
         self.step_count += 1
 
     def learn(self):
-        if len(self.replay_buffer) < self.batch_size:
+        if len(self.replay_buffer) < self.min_buffer_size:
             return
         states, actions, rewards, next_states, dones, p = \
             self.replay_buffer.sample(self.batch_size)
 
         error = self.bellman_eqn_error(
             states, actions, rewards, next_states, dones)
-        importance_scaling = (self.replay_buffer.buffer_size * p) ** -1
-        loss = (importance_scaling * (error ** 2)).sum() / self.batch_size
+
+        # importance_scaling = (self.replay_buffer.buffer_size * p) ** -1
+        # importance_scaling = torch.from_numpy(np.ones_like(p)).float().to(self.device)
         self.critic_optimizer.zero_grad()
+        # loss = (importance_scaling * (error ** 2)).sum() / self.batch_size
+        loss = (error ** 2).sum() / self.batch_size
         loss.backward()
         self.critic_optimizer.step()
 
         self.actor_optimizer.zero_grad()
-        loss = -1 * (
-                importance_scaling
-                * self.critic_control(states,self.actor_control(states))).sum()
+        critic_score = self.critic_control(states, self.actor_control(states))
+        # loss = -1 * (importance_scaling * critic_score).sum() / self.batch_size
+        loss = -1 * critic_score.sum() / self.batch_size
         loss.backward()
         self.actor_optimizer.step()
 
@@ -112,9 +116,7 @@ class Agent:
         and apply the target network to it to get the target reward which is
         used for the bellman eqn error.
         """
-        rewards = rewards.unsqueeze(1)
-        dones = dones.unsqueeze(1)
-        next_actions = self.actor_control(next_states)
+        next_actions = self.actor_target(next_states)
 
         target_action_values = self.critic_target(next_states, next_actions)
 
@@ -127,17 +129,25 @@ class Agent:
         error = current_rewards - target_rewards
         return error
 
-    def calculate_p(self, state, action, reward, next_state, done):
-        next_state = torch.from_numpy(next_state).float().to(
-            self.device)
-        state = torch.from_numpy(state).float().to(self.device)
-        action = torch.from_numpy(action).float().to(self.device)
-        reward = torch.from_numpy(reward).float().to(self.device)
-        done = torch.from_numpy(done).float().to(
-            self.device)
-
-        return abs(self.bellman_eqn_error(state, action, reward, next_state,
-                                          done)) + 1e-3
+    # def calculate_p(self, state, action, reward, next_state, done):
+    #     next_state = torch.from_numpy(next_state).float().to(
+    #         self.device)
+    #     state = torch.from_numpy(state).float().to(self.device)
+    #     action = torch.from_numpy(action).float().to(self.device)
+    #     reward = torch.from_numpy(reward).float().to(self.device)
+    #     done = torch.from_numpy(done).float().to(
+    #         self.device)
+    #
+    #     self.actor_control.eval()
+    #     self.critic_control.eval()
+    #
+    #     with torch.no_grad():
+    #         retval = abs(
+    #             self.bellman_eqn_error(state, action, reward, next_state,
+    #                                    done)) + 1e-3
+    #     self.critic_control.train()
+    #     self.actor_control.train()
+    #     return retval
 
     def update_target(self, control, target):
         for target_param, control_param in zip(
@@ -150,12 +160,13 @@ class Agent:
     def end_of_episode(self, final_score):
         self.step_count = 0
 
-        if final_score > self.last_score:
-            sigma = self.noise.sigma * self.noise_decay
-        else:
-            sigma = self.noise.sigma / self.noise_decay
+        # if final_score > self.last_score:
+        #     sigma = self.noise.sigma * self.noise_decay
+        # else:
+        #     sigma = self.noise.sigma / self.noise_decay
 
-        self.noise.sigma = min(sigma, self.noise_max)
+        # self.noise.sigma = min(sigma, self.noise_max)
+
         self.last_score = final_score
         self.noise.reset()
 

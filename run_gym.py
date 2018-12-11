@@ -12,7 +12,7 @@ from agent import Agent
 if len(sys.argv) > 1:
     game = sys.argv[1]
 else:
-    game = 'MountainCarContinuous-v0'
+    game = 'LunarLanderContinuous-v2'
 env = gym.make(game)
 env.seed(2)
 
@@ -83,14 +83,17 @@ def param_sweep(configs, max_eps):
 
 
 configs = dict(
-    buffer_size=[int(1e5)],
-    batch_size=[32, 64, 128],
-    learning_rate=[5e-5, 1e-4, 2e-4],
+    buffer_size=[int(1e6)],
+    batch_size=[64],
+    actor_learning_rate=[1e-3],
+    critic_learning_rate=[1e-3],
     discount_rate=[0.99],
-    tau=[5e-5, 1e-4, 2e-4],
-    steps_per_update=[2, 5, 10],
-    weight_decay=[0.0001],
+    tau=[1e-3],
+    steps_per_update=[1],
+    weight_decay=[0.01],
+    noise_decay=[1.0],
     noise_max=[0.2],
+    dropout_p=[0.0]
 )
 
-param_sweep(configs, 300)
+param_sweep(configs, 500)

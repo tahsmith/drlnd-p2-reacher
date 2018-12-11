@@ -5,6 +5,7 @@ from agent import Agent
 
 
 def main():
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     with make_reacher_env() as env:
         brain_name = env.brain_names[0]
         brain = env.brains[brain_name]
@@ -16,25 +17,27 @@ def main():
         state = env_info.vector_observations[0]
         state_size = len(state)
 
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
         agent = Agent(
             device,
             state_size,
             action_size,
-            buffer_size=int(1e5),
-            batch_size=64,
-            learning_rate=1e-4,
+            buffer_size=int(1e6),
+            batch_size=54,
+            actor_learning_rate=1e-3,
+            critic_learning_rate=1e-3,
             discount_rate=0.99,
-            tau=1e-4,
-            steps_per_update=4,
+            tau=1e-3,
+            steps_per_update=5,
+            weight_decay=0.0,
+            noise_decay=1.0,
+            noise_max=0.2
         )
 
         return train(env, agent, brain_name)
 
 
 def train(env, agent, brain_name, window_size=100, max_eps=int(2e5),
-          min_score=14.0):
+          min_score=30.0):
     scores = []
 
     for i in range(max_eps):
