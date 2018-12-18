@@ -92,8 +92,8 @@ configs = dict(
     steps_per_update=[1],
     weight_decay=[0.01],
     noise_decay=[1.0],
-    noise_max=[0.2],
-    dropout_p=[0.0]
+    noise_max=[0.0],
+    dropout_p=[0.2]
 )
 
-param_sweep(configs, 500)
+param_sweep(configs, 1000)

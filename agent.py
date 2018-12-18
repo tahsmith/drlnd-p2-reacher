@@ -29,6 +29,7 @@ class Agent:
         self.action_size = action_size
 
         self.critic_control = Critic(state_size, action_size).to(device)
+        self.critic_control.dropout.p = dropout_p
         self.critic_target = Critic(state_size, action_size).to(device)
         self.critic_target.eval()
         self.critic_optimizer = torch.optim.Adam(
@@ -38,6 +39,7 @@ class Agent:
 
         self.actor_control = Actor(state_size, action_size, action_range).to(
             device)
+        self.actor_control.dropout.p = dropout_p
         self.actor_target = Actor(state_size, action_size, action_range).to(
             device)
         self.actor_target.eval()
@@ -93,8 +95,8 @@ class Agent:
         error = self.bellman_eqn_error(
             states, actions, rewards, next_states, dones)
 
-        importance_scaling = torch.from_numpy(np.ones_like(p)).float().to(
-            self.device)
+        importance_scaling = (self.replay_buffer.buffer_size * p) ** -1
+        importance_scaling /= importance_scaling.max()
         self.critic_optimizer.zero_grad()
         loss = (importance_scaling * (error ** 2)).sum() / self.batch_size
         loss.backward()

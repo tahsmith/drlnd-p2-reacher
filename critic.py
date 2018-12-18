@@ -12,11 +12,10 @@ class Critic(nn.Module):
 
         self.state_layer = nn.Sequential(
             nn.Linear(in_features=state_size, out_features=400),
-            nn.ELU()
-        )
-        self.qa = nn.Sequential(
             nn.ELU(),
             self.dropout,
+        )
+        self.qa = nn.Sequential(
             nn.Linear(in_features=400 + action_size,
                       out_features=300),
             nn.ELU(),
