@@ -32,11 +32,15 @@ class ReplayBuffer:
     def add(self, state, action, reward, next_state, done, p=1.0):
         """Add a new experience to memory."""
         if self.last < self.buffer_size:
+            i = self.last
             self.last += 1
+        else:
+            i = np.argmin(self.p)
+        #
+        # i = self.cursor
+        # self.cursor += 1
+        # self.cursor %= self.buffer_size
 
-        i = self.cursor
-        self.cursor += 1
-        self.cursor %= self.buffer_size
 
         self.p[i] = p
         self.state[i, :] = state
@@ -65,7 +69,10 @@ class ReplayBuffer:
         p = torch.from_numpy(p[choices, np.newaxis]).float().to(
             self.device)
 
-        return states, actions, rewards, next_states, dones, p
+        return choices, (states, actions, rewards, next_states, dones, p)
+
+    def update(self, indices, p):
+        self.p[indices] = p[:, 0]
 
     def __len__(self):
         """Return the current size of internal memory."""

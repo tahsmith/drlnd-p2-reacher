@@ -22,15 +22,16 @@ def main():
             state_size,
             action_size,
             buffer_size=int(1e6),
-            batch_size=54,
-            actor_learning_rate=1e-3,
+            batch_size=64,
+            actor_learning_rate=1e-4,
             critic_learning_rate=1e-3,
             discount_rate=0.99,
             tau=1e-3,
-            steps_per_update=5,
-            weight_decay=0.0,
+            steps_per_update=1,
+            weight_decay=0.01,
             noise_decay=1.0,
-            noise_max=0.2
+            noise_max=0.2,
+            dropout_p=0.0
         )
 
         return train(env, agent, brain_name)

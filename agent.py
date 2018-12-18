@@ -30,6 +30,7 @@ class Agent:
 
         self.critic_control = Critic(state_size, action_size).to(device)
         self.critic_target = Critic(state_size, action_size).to(device)
+        self.critic_target.eval()
         self.critic_optimizer = torch.optim.Adam(
             self.critic_control.parameters(),
             weight_decay=weight_decay,
@@ -39,6 +40,7 @@ class Agent:
             device)
         self.actor_target = Actor(state_size, action_size, action_range).to(
             device)
+        self.actor_target.eval()
         self.actor_optimizer = torch.optim.Adam(
             self.actor_control.parameters(),
             weight_decay=weight_decay,
@@ -85,13 +87,14 @@ class Agent:
     def learn(self):
         if len(self.replay_buffer) < self.min_buffer_size:
             return
-        states, actions, rewards, next_states, dones, p = \
+        indicies, (states, actions, rewards, next_states, dones, p) = \
             self.replay_buffer.sample(self.batch_size)
 
         error = self.bellman_eqn_error(
             states, actions, rewards, next_states, dones)
 
-        importance_scaling = (self.replay_buffer.buffer_size * p) ** -1
+        importance_scaling = torch.from_numpy(np.ones_like(p)).float().to(
+            self.device)
         self.critic_optimizer.zero_grad()
         loss = (importance_scaling * (error ** 2)).sum() / self.batch_size
         loss.backward()
@@ -105,6 +108,8 @@ class Agent:
 
         self.update_target(self.critic_control, self.critic_target)
         self.update_target(self.actor_control, self.actor_target)
+
+        self.replay_buffer.update(indicies, error.detach().abs().cpu() + 1e-3)
 
     def bellman_eqn_error(self, states, actions, rewards, next_states, dones):
         """Double DQN error - use the control network to get the best action

@@ -85,7 +85,7 @@ def param_sweep(configs, max_eps):
 configs = dict(
     buffer_size=[int(1e6)],
     batch_size=[64],
-    actor_learning_rate=[1e-3],
+    actor_learning_rate=[1e-4],
     critic_learning_rate=[1e-3],
     discount_rate=[0.99],
     tau=[1e-3],
