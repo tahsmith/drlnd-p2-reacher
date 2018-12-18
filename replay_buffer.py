@@ -48,11 +48,9 @@ class ReplayBuffer:
     def sample(self, batch_size):
         """Randomly sample a batch of experiences from memory."""
         p = normalise(self.p[:self.last])
-        # choices = np.random.choice(np.arange(self.last),
-        #                            size=(batch_size,),
-        #                            p=p)
         choices = np.random.choice(np.arange(self.last),
-                                   size=(batch_size,))
+                                   size=(batch_size,),
+                                   p=p)
 
         states = torch.from_numpy(self.state[choices, :]).float().to(
             self.device)

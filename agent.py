@@ -70,12 +70,10 @@ class Agent:
         if add_noise:
             noise = self.noise.sample()
             action += noise
-            # action += np.random.uniform(-self.noise_max, self.noise_max, (1, 4))
         return action
 
     def step(self, state, action, reward, next_state, done):
-        # p = self.calculate_p(state, action, reward, next_state, done)
-        p = np.ones_like(done)
+        p = self.calculate_p(state, action, reward, next_state, done)
 
         for i in range(state.shape[0]):
             self.replay_buffer.add(state[i, :], action[i, :], reward[i],
@@ -93,18 +91,15 @@ class Agent:
         error = self.bellman_eqn_error(
             states, actions, rewards, next_states, dones)
 
-        # importance_scaling = (self.replay_buffer.buffer_size * p) ** -1
-        # importance_scaling = torch.from_numpy(np.ones_like(p)).float().to(self.device)
+        importance_scaling = (self.replay_buffer.buffer_size * p) ** -1
         self.critic_optimizer.zero_grad()
-        # loss = (importance_scaling * (error ** 2)).sum() / self.batch_size
-        loss = (error ** 2).sum() / self.batch_size
+        loss = (importance_scaling * (error ** 2)).sum() / self.batch_size
         loss.backward()
         self.critic_optimizer.step()
 
         self.actor_optimizer.zero_grad()
         critic_score = self.critic_control(states, self.actor_control(states))
-        # loss = -1 * (importance_scaling * critic_score).sum() / self.batch_size
-        loss = -1 * critic_score.sum() / self.batch_size
+        loss = -1 * (importance_scaling * critic_score).sum() / self.batch_size
         loss.backward()
         self.actor_optimizer.step()
 
@@ -129,25 +124,25 @@ class Agent:
         error = current_rewards - target_rewards
         return error
 
-    # def calculate_p(self, state, action, reward, next_state, done):
-    #     next_state = torch.from_numpy(next_state).float().to(
-    #         self.device)
-    #     state = torch.from_numpy(state).float().to(self.device)
-    #     action = torch.from_numpy(action).float().to(self.device)
-    #     reward = torch.from_numpy(reward).float().to(self.device)
-    #     done = torch.from_numpy(done).float().to(
-    #         self.device)
-    #
-    #     self.actor_control.eval()
-    #     self.critic_control.eval()
-    #
-    #     with torch.no_grad():
-    #         retval = abs(
-    #             self.bellman_eqn_error(state, action, reward, next_state,
-    #                                    done)) + 1e-3
-    #     self.critic_control.train()
-    #     self.actor_control.train()
-    #     return retval
+    def calculate_p(self, state, action, reward, next_state, done):
+        next_state = torch.from_numpy(next_state).float().to(
+            self.device)
+        state = torch.from_numpy(state).float().to(self.device)
+        action = torch.from_numpy(action).float().to(self.device)
+        reward = torch.from_numpy(reward).float().to(self.device)
+        done = torch.from_numpy(done).float().to(
+            self.device)
+
+        self.actor_control.eval()
+        self.critic_control.eval()
+
+        with torch.no_grad():
+            retval = abs(
+                self.bellman_eqn_error(state, action, reward, next_state,
+                                       done)) + 1e-3
+        self.critic_control.train()
+        self.actor_control.train()
+        return retval
 
     def update_target(self, control, target):
         for target_param, control_param in zip(
