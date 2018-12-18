@@ -90,10 +90,10 @@ configs = dict(
     discount_rate=[0.99],
     tau=[1e-3],
     steps_per_update=[1],
-    weight_decay=[0.01],
+    weight_decay=[0.0],
     noise_decay=[1.0],
-    noise_max=[0.0],
-    dropout_p=[0.2]
+    noise_max=[0.2],
+    dropout_p=[0.5]
 )
 
 param_sweep(configs, 1000)
