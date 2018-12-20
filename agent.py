@@ -22,9 +22,10 @@ class Agent:
                  dropout_p=0.0,
                  weight_decay=0.0001,
                  noise_max=0.2,
-                 noise_decay=1.0
+                 noise_decay=1.0,
+                 n_agents=1
                  ):
-        self.device = device
+        self.device: torch.device = device
         self.state_size = state_size
         self.action_size = action_size
 
@@ -61,7 +62,7 @@ class Agent:
         self.steps_per_update = steps_per_update
 
         self.noise_max = noise_max
-        self.noise = OUNoise(action_size, 15071988, sigma=self.noise_max)
+        self.noise = OUNoise([n_agents, action_size], 15071988, sigma=self.noise_max)
         self.noise_decay = noise_decay
         self.last_score = float('-inf')
 
@@ -81,7 +82,7 @@ class Agent:
 
         for i in range(state.shape[0]):
             self.replay_buffer.add(state[i, :], action[i, :], reward[i],
-                                   next_state[i, :], done[i], p)
+                                   next_state[i, :], done[i], p[i])
         if self.step_count % self.steps_per_update == 0:
             self.learn()
         self.step_count += 1
@@ -140,6 +141,9 @@ class Agent:
         done = torch.from_numpy(done).float().to(
             self.device)
 
+        done = done.unsqueeze(1)
+        reward = reward.unsqueeze(1)
+
         self.actor_control.eval()
         self.critic_control.eval()
 
@@ -173,10 +177,14 @@ class Agent:
         self.noise.reset()
 
     def save(self, path):
-        torch.save(self.critic_control.state_dict(), path)
+        torch.save(self.critic_control.state_dict(), path + '-critic.p')
+        torch.save(self.actor_control.state_dict(), path + '-actor.p')
 
     def restore(self, path):
-        self.critic_control.load_state_dict(torch.load(path))
+        self.critic_control.load_state_dict(
+            torch.load(path + '-critic.p', map_location='cpu'))
+        self.actor_control.load_state_dict(
+            torch.load(path + '-actor.p', map_location='cpu'))
 
 
 class OUNoise:
@@ -197,7 +205,7 @@ class OUNoise:
     def sample(self):
         """Update internal state and return it as a noise sample."""
         x = self.state
-        dx = self.theta * (self.mu - x) + self.sigma * np.array(
-            [random.random() for i in range(len(x))])
+        dx = self.theta * (self.mu - x) + self.sigma * np.random.uniform(
+            size=self.mu.shape)
         self.state = x + dx
         return self.state

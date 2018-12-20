@@ -7,20 +7,18 @@ from unityagents import UnityEnvironment
 from agent import Agent
 
 if platform.system() == 'Darwin':
-    REACHER_APP = './Reacher.app'
+    REACHER_APP = './Reacher20.app'
 else:
-    REACHER_APP = './Reacher_Linux_NoVis/Reacher.x86_64'
+    REACHER_APP = './Reacher20_Linux_NoVis/Reacher.x86_64'
 
 
-@contextmanager
 def make_reacher_env():
     env = UnityEnvironment(file_name=REACHER_APP)
-    yield env
-    env.close()
+    return env
 
 
-def reacher_episode(env, agent: Agent, brain_name, max_t=1000):
-    env_info = env.reset(train_mode=True)[brain_name]
+def reacher_episode(env, agent: Agent, brain_name, max_t=1000, train=True):
+    env_info = env.reset(train_mode=train)[brain_name]
     state = np.array(env_info.vector_observations)
     score = 0
     for t in range(max_t):
@@ -29,9 +27,10 @@ def reacher_episode(env, agent: Agent, brain_name, max_t=1000):
         next_state = np.array(env_info.vector_observations)
         reward = np.array(env_info.rewards)
         done = np.array(env_info.local_done, dtype=np.uint8)
-        agent.step(state, action, reward, next_state, done)
+        if train:
+            agent.step(state, action, reward, next_state, done)
         state = next_state
-        score += reward
+        score += reward.mean()
 
         if done.any():
             break
