@@ -29,7 +29,7 @@ def main():
         tau=1e-3,
         steps_per_update=5,
         weight_decay=0.00,
-        noise_decay=1.0,
+        noise_decay=0.999,
         noise_max=0.2,
         dropout_p=0.2,
         n_agents=20

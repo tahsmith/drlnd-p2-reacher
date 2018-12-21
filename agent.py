@@ -170,13 +170,7 @@ class Agent:
     def end_of_episode(self, final_score):
         self.step_count = 0
 
-        # if final_score > self.last_score:
-        #     sigma = self.noise.sigma * self.noise_decay
-        # else:
-        #     sigma = self.noise.sigma / self.noise_decay
-
-        # self.noise.sigma = min(sigma, self.noise_max)
-
+        self.noise.sigma *= self.noise_decay
         self.last_score = final_score
         self.noise.reset()
 
