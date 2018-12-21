@@ -3,6 +3,7 @@ import random
 
 import torch
 import torch.optim
+import torch.functional as F
 import numpy as np
 
 from critic import Critic
@@ -93,8 +94,10 @@ class Agent:
         indicies, (states, actions, rewards, next_states, dones, p) = \
             self.replay_buffer.sample(self.batch_size)
 
+        self.actor_control.eval()
         error = self.bellman_eqn_error(
             states, actions, rewards, next_states, dones)
+        self.actor_control.train()
 
         importance_scaling = (self.replay_buffer.buffer_size * p) ** -1
         importance_scaling /= importance_scaling.max()
@@ -104,7 +107,8 @@ class Agent:
         self.critic_optimizer.step()
 
         self.actor_optimizer.zero_grad()
-        critic_score = self.critic_control(states, self.actor_control(states))
+        expected_actions = self.actor_control(states)
+        critic_score = self.critic_control(states, expected_actions)
         loss = -1 * (importance_scaling * critic_score).sum() / self.batch_size
         loss.backward()
         self.actor_optimizer.step()
@@ -119,7 +123,7 @@ class Agent:
         and apply the target network to it to get the target reward which is
         used for the bellman eqn error.
         """
-        next_actions = self.actor_target(next_states)
+        next_actions = self.actor_control(next_states)
 
         target_action_values = self.critic_target(next_states, next_actions)
 

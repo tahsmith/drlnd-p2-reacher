@@ -1,5 +1,4 @@
 import platform
-from contextlib import contextmanager
 
 import numpy as np
 from unityagents import UnityEnvironment
