@@ -6,9 +6,9 @@ from unityagents import UnityEnvironment
 from agent import Agent
 
 if platform.system() == 'Darwin':
-    REACHER_APP = './Reacher20.app'
+    REACHER_APP = './Reacher.app'
 else:
-    REACHER_APP = './Reacher20_Linux_NoVis/Reacher.x86_64'
+    REACHER_APP = './Reacher_Linux_NoVis/Reacher.x86_64'
 
 
 def make_reacher_env():
