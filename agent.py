@@ -67,13 +67,13 @@ class Agent:
         self.noise_decay = noise_decay
         self.last_score = float('-inf')
 
-    def policy(self, state, add_noise=True):
+    def policy(self, state, training=True):
         state = torch.from_numpy(state).float().to(self.device)
         self.actor_control.eval()
         with torch.no_grad():
             action = self.actor_control(state).cpu().numpy()
         self.actor_control.train()
-        if add_noise:
+        if training:
             noise = self.noise.sample()
             action += noise
         return action
@@ -123,7 +123,7 @@ class Agent:
         and apply the target network to it to get the target reward which is
         used for the bellman eqn error.
         """
-        next_actions = self.actor_control(next_states)
+        next_actions = self.actor_target(next_states)
 
         target_action_values = self.critic_target(next_states, next_actions)
 
@@ -207,3 +207,23 @@ class OUNoise:
             size=self.mu.shape)
         self.state = x + dx
         return self.state
+
+
+def default_agent(device, state_size, action_size):
+    return Agent(
+        device,
+        state_size,
+        action_size,
+        buffer_size=int(1e6),
+        batch_size=64,
+        actor_learning_rate=1e-4,
+        critic_learning_rate=1e-3,
+        discount_rate=0.99,
+        tau=1e-3,
+        steps_per_update=5,
+        weight_decay=0.00,
+        noise_decay=1.0,
+        noise_max=0.2,
+        dropout_p=0.2,
+        n_agents=12
+    )

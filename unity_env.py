@@ -1,27 +1,15 @@
-import platform
+from functools import partial
 
 import numpy as np
-from unityagents import UnityEnvironment
-
 from agent import Agent
 
-if platform.system() == 'Darwin':
-    REACHER_APP = './Reacher.app'
-else:
-    REACHER_APP = './Reacher_Linux_NoVis/Reacher.x86_64'
 
-
-def make_reacher_env():
-    env = UnityEnvironment(file_name=REACHER_APP)
-    return env
-
-
-def reacher_episode(env, agent: Agent, brain_name, max_t=1000, train=True):
+def unity_episode(env, agent: Agent, brain_name, max_t=10000, train=True):
     env_info = env.reset(train_mode=train)[brain_name]
     state = np.array(env_info.vector_observations)
     score = 0
     for t in range(max_t):
-        action = agent.policy(state)
+        action = agent.policy(state, train)
         env_info = env.step(action)[brain_name]
         next_state = np.array(env_info.vector_observations)
         reward = np.array(env_info.rewards)
@@ -36,3 +24,7 @@ def reacher_episode(env, agent: Agent, brain_name, max_t=1000, train=True):
 
     agent.end_of_episode(score)
     return score
+
+
+def wrap_env(env, brain_name):
+    return partial(unity_episode, env, brain_name=brain_name)

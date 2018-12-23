@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from reacher_env import reacher_episode
+from unity_env import unity_episode
 
 
 @pytest.fixture
@@ -21,5 +21,5 @@ def agent():
 
 
 def test_reacher_episode(env, agent):
-    reacher_episode(env, agent, 'brain')
+    unity_episode(env, agent, 'brain')
 
