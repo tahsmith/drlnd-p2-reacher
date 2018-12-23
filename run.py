@@ -23,13 +23,14 @@ def main(argv):
 
     agent = default_agent(device, state_size, action_size)
 
-    episode_fn = wrap_env(env, brain_name)
+    episode_fn = wrap_env(env, brain_name, train=False)
 
     return run(episode_fn, agent)
 
 
 def run(episode_fn, agent):
-    return episode_fn(agent)
+    while True:
+        episode_fn(agent)
 
 
 if __name__ == '__main__':

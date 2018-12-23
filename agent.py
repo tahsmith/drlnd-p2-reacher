@@ -51,7 +51,7 @@ class Agent:
             lr=actor_learning_rate)
 
         self.batch_size = batch_size
-        self.min_buffer_size = batch_size
+        self.min_buffer_size = 5000
         self.replay_buffer = ReplayBuffer(device, state_size, action_size,
                                           buffer_size)
 
@@ -123,7 +123,7 @@ class Agent:
         and apply the target network to it to get the target reward which is
         used for the bellman eqn error.
         """
-        next_actions = self.actor_target(next_states)
+        next_actions = self.actor_control(next_states)
 
         target_action_values = self.critic_target(next_states, next_actions)
 
@@ -203,7 +203,7 @@ class OUNoise:
     def sample(self):
         """Update internal state and return it as a noise sample."""
         x = self.state
-        dx = self.theta * (self.mu - x) + self.sigma * np.random.uniform(
+        dx = self.theta * (self.mu - x) + self.sigma * np.random.normal(
             size=self.mu.shape)
         self.state = x + dx
         return self.state
@@ -218,7 +218,7 @@ def default_agent(device, state_size, action_size):
         batch_size=64,
         actor_learning_rate=1e-4,
         critic_learning_rate=1e-3,
-        discount_rate=0.99,
+        discount_rate=0.999,
         tau=1e-3,
         steps_per_update=5,
         weight_decay=0.00,
