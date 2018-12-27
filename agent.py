@@ -3,7 +3,6 @@ import random
 
 import torch
 import torch.optim
-import torch.functional as F
 import numpy as np
 
 from critic import Critic
@@ -104,6 +103,7 @@ class Agent:
         self.critic_optimizer.zero_grad()
         loss = (importance_scaling * (error ** 2)).sum() / self.batch_size
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.critic_control.parameters(), 1)
         self.critic_optimizer.step()
 
         self.actor_optimizer.zero_grad()
@@ -214,13 +214,13 @@ def default_agent(device, state_size, action_size):
         device,
         state_size,
         action_size,
-        buffer_size=int(1e6),
+        buffer_size=int(1e5),
         batch_size=64,
         actor_learning_rate=1e-4,
         critic_learning_rate=1e-3,
         discount_rate=0.999,
-        tau=1e-3,
-        steps_per_update=5,
+        tau=1e-2,
+        steps_per_update=1,
         weight_decay=0.00,
         noise_decay=1.0,
         noise_max=0.2,

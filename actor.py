@@ -18,12 +18,15 @@ class Actor(nn.Module):
 
         self.dropout = nn.Dropout()
         self.pi = nn.Sequential(
-            nn.Linear(in_features=state_size, out_features=400),
+            nn.Linear(in_features=state_size, out_features=400, bias=False),
+            nn.BatchNorm1d(400),
             nn.ELU(),
             self.dropout,
-            nn.Linear(in_features=400, out_features=300),
+            nn.Linear(in_features=400, out_features=300, bias=False),
+            nn.BatchNorm1d(300),
             nn.ELU(),
-            nn.Linear(in_features=300, out_features=action_size),
+            nn.Linear(in_features=300, out_features=action_size, bias=False),
+            nn.BatchNorm1d(action_size)
         )
 
     def forward(self, state):
